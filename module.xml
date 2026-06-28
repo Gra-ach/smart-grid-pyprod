@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Export generator="Cache" version="25">
+  <Document name="smart-grid-pyprod.ZPM">
+    <Module>
+      <Name>smart-grid-pyprod</Name>
+      <Version>1.0.0</Version>
+      <Description>Electric utility smart-meter telemetry. Complete PyProd production with inbound adapter, business service, business process, and business operation. The business process computes per-file total kWh, average kWh, peak meter id, and peak kWh, then the operation persists every CSV row with those calculation results.</Description>
+      <Author>
+        <Person>Iryna Mykhailova</Person>
+        <Organization>Igor Sikorsky Kyiv Polytechnic Institute</Organization>
+        <CopyrightDate>2026</CopyrightDate>
+        <License>MIT</License>
+      </Author>
+      <Packaging>module</Packaging>
+      <SystemRequirements Version=">=2024.1" Interoperability="enabled"/>
+      <Defaults>
+        <Parameter Name="ExtraPipFlags">--upgrade</Parameter>
+      </Defaults>
+      <Default Name="envSetup" Value="0"/>
+      <Default Name="fileWatcherRoot" Value="${libdir}/smart-grid-pyprod"/>
+      <SourcesRoot>src</SourcesRoot>
+
+      <!-- Deploy Python source so it is importable as the smart-grid-pyprod package -->
+      <FileCopy Name="src/smart-grid-pyprod/" Target="${libdir}/smart-grid-pyprod/"/>
+
+      <Resource Name="Setup.ProductionSetup.cls"/>
+
+      <!-- Run production setup after all resources are activated -->
+      <!-- Pass -DenvSetup=1 at install time to also run environment setup -->
+      <Invoke Class="Setup.ProductionSetup" Method="Setup" Phase="Activate" When="After" CheckStatus="true">
+        <Arg>${fileWatcherRoot}</Arg>
+        <Arg>${envSetup}</Arg>
+      </Invoke>
+      <Invoke Class="Setup.ProductionSetup" Method="StartProduction" CustomPhase="start" When="After"></Invoke>
+    </Module>
+  </Document>
+</Export>

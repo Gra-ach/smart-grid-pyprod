@@ -1,0 +1,7 @@
+**/.venv/
+src/pyprod/
+**/__pycache__/
+**/.pytest_cache/
+**/iris-main.log
+data/processed/*.csv*
+.vscode
