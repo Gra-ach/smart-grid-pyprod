@@ -21,7 +21,6 @@ RUN --mount=type=bind,src=.,dst=. \
     iris start IRIS && \
     iris merge IRIS merge.cpf && \
     iris session iris < iris.script &&\
-    intersystems_pyprod /home/irisowner/dev/src/smart-grid-pyprod/smart_grid.py &&\
-    iris stop IRIS quietly saftely
-
+	intersystems_pyprod /home/irisowner/dev/src/smart-grid-pyprod/smart_grid.py &&\
+    iris stop IRIS quietly safely
     

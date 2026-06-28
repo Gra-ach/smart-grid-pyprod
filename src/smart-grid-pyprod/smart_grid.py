@@ -1,15 +1,3 @@
-"""
-Smart Grid CSV ingestion production using intersystems_pyprod.
-
-Domain: electric utility smart-meter telemetry.
-Flow:
-  CSVFileInboundAdapter -> SmartMeterFileService -> SmartMeterAnalysisProcess -> SmartMeterDBOperation
-
-Install/load inside an IRIS Python environment configured for pyprod:
-  pip install intersystems_pyprod --target /usr/irissys/mgr/python
-  intersystems_pyprod /path/to/smart_grid_production.py
-"""
-
 import csv
 import os
 import shutil
@@ -36,6 +24,8 @@ from intersystems_pyprod import (
 
 iris_package_name = "EnergyOps"
 
+FILE_WATCHER_ROOT = "/home/irisowner/dev/Data"
+
 
 class SmartMeterFileMessage(JsonSerialize):
     file_path: str = Column()
@@ -56,11 +46,11 @@ class SmartMeterAnalysisMessage(JsonSerialize):
 class CSVFileInboundAdapter(InboundAdapter):
     inbound_file_dir: str = IRISProperty(
         description="Directory to poll for inbound smart-meter CSV files",
-        settings="Adapter Settings",
+        settings="Adapter Settings"
     )
     processed_file_dir: str = IRISProperty(
         description="Directory where files are moved while being processed",
-        settings="Adapter Settings",
+        settings="Adapter Settings"
     )
 
     def on_task(self):
@@ -87,11 +77,11 @@ class CSVFileInboundAdapter(InboundAdapter):
 class SmartMeterFileService(BusinessService):
     ADAPTER: str = IRISParameter(
         value=f"{iris_package_name}.CSVFileInboundAdapter",
-        description="Pure Python CSV polling adapter",
+        description="Pure Python CSV polling adapter"
     )
     process_target: str = IRISProperty(
         description="Business process target",
-        settings="Target Settings",
+        settings="Target Settings"
     )
 
     def on_process_input(self, input):
@@ -103,7 +93,7 @@ class SmartMeterFileService(BusinessService):
         msg = SmartMeterFileMessage(
             file_path=file_path,
             source_file=os.path.basename(file_path),
-            headers=headers,
+            headers=headers
         )
         return self.send_request_async(self.process_target, msg, response_required=0)
 
@@ -111,7 +101,7 @@ class SmartMeterFileService(BusinessService):
 class SmartMeterAnalysisProcess(BusinessProcess):
     operation_target: str = IRISProperty(
         description="Operation that persists rows and analysis results",
-        settings="Target Settings",
+        settings="Target Settings"
     )
 
     def on_request(self, request):
@@ -147,7 +137,7 @@ class SmartMeterAnalysisProcess(BusinessProcess):
             file_total_kwh=round(total_kwh, 2),
             file_avg_kwh=avg_kwh,
             peak_meter_id=peak_meter_id,
-            peak_kwh=round(peak_kwh, 2),
+            peak_kwh=round(peak_kwh, 2)
         )
         return self.send_request_async(self.operation_target, analysis, response_required=0)
 
@@ -155,7 +145,7 @@ class SmartMeterAnalysisProcess(BusinessProcess):
 class SmartMeterDBOperation(BusinessOperation):
     archive_file_dir: str = IRISProperty(
         description="Directory where successfully loaded files are archived",
-        settings="Operation Settings",
+        settings="Operation Settings"
     )
 
     message_map = {
@@ -212,7 +202,7 @@ class SmartMeterDBOperation(BusinessOperation):
                     float(request.file_total_kwh),
                     float(request.file_avg_kwh),
                     request.peak_meter_id,
-                    float(request.peak_kwh),
+                    float(request.peak_kwh)
                 )
                 rows_inserted += 1
 
@@ -228,31 +218,28 @@ class SmartMeterDBOperation(BusinessOperation):
 
 
 class SmartGridProduction(Production):
-    actor_pool_size = 1
-    testing_enabled = True
-
     services = [
         ServiceItem(
             "SmartMeterCSVService",
             f"{iris_package_name}.SmartMeterFileService",
             host_settings={"process_target": "SmartMeterAnalysisProcess"},
             adapter_settings={
-                "inbound_file_dir": "D:\Downloads\smart_grid_pyprod\input",
-                "processed_file_dir": "D:\Downloads\smart_grid_pyprod\processing",
-            },
+                "inbound_file_dir": f"{FILE_WATCHER_ROOT}/input",
+                "processed_file_dir": f"{FILE_WATCHER_ROOT}/processing"
+            }
         )
     ]
     processes = [
         ProcessItem(
             "SmartMeterAnalysisProcess",
             f"{iris_package_name}.SmartMeterAnalysisProcess",
-            host_settings={"operation_target": "SmartMeterDBOperation"},
+            host_settings={"operation_target": "SmartMeterDBOperation"}
         )
     ]
     operations = [
         OperationItem(
             "SmartMeterDBOperation",
             f"{iris_package_name}.SmartMeterDBOperation",
-            host_settings={"archive_file_dir": "D:\Downloads\smart_grid_pyprod\archive"},
+            host_settings={"archive_file_dir": f"{FILE_WATCHER_ROOT}/archive"}
         )
     ]
