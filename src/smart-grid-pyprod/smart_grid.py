@@ -76,7 +76,7 @@ class CSVFileInboundAdapter(InboundAdapter):
 
 class SmartMeterFileService(BusinessService):
     ADAPTER: str = IRISParameter(
-        value=f"{iris_package_name}.CSVFileInboundAdapter",
+        value="EnergyOps.CSVFileInboundAdapter",
         description="Pure Python CSV polling adapter"
     )
     process_target: str = IRISProperty(
@@ -95,7 +95,7 @@ class SmartMeterFileService(BusinessService):
             source_file=os.path.basename(file_path),
             headers=headers
         )
-        return self.send_request_async(self.process_target, msg, response_required=0)
+        return self.send_request_async(self.process_target, msg)
 
 
 class SmartMeterAnalysisProcess(BusinessProcess):
@@ -109,6 +109,7 @@ class SmartMeterAnalysisProcess(BusinessProcess):
             "meter_id", "reading_timestamp", "region", "feeder_type",
             "kwh_consumed", "voltage_avg", "temperature_c", "outage_minutes"
         }
+
         missing = required.difference(set(request.headers))
         if missing:
             IRISLog.Error(f"CSV {request.source_file} is missing columns: {sorted(missing)}")
@@ -139,6 +140,7 @@ class SmartMeterAnalysisProcess(BusinessProcess):
             peak_meter_id=peak_meter_id,
             peak_kwh=round(peak_kwh, 2)
         )
+
         return self.send_request_async(self.operation_target, analysis, response_required=0)
 
 
@@ -221,7 +223,7 @@ class SmartGridProduction(Production):
     services = [
         ServiceItem(
             "SmartMeterCSVService",
-            f"{iris_package_name}.SmartMeterFileService",
+            "EnergyOps.SmartMeterFileService",
             host_settings={"process_target": "SmartMeterAnalysisProcess"},
             adapter_settings={
                 "inbound_file_dir": f"{FILE_WATCHER_ROOT}/input",
@@ -232,14 +234,14 @@ class SmartGridProduction(Production):
     processes = [
         ProcessItem(
             "SmartMeterAnalysisProcess",
-            f"{iris_package_name}.SmartMeterAnalysisProcess",
+            "EnergyOps.SmartMeterAnalysisProcess",
             host_settings={"operation_target": "SmartMeterDBOperation"}
         )
     ]
     operations = [
         OperationItem(
             "SmartMeterDBOperation",
-            f"{iris_package_name}.SmartMeterDBOperation",
+            "EnergyOps.SmartMeterDBOperation",
             host_settings={"archive_file_dir": f"{FILE_WATCHER_ROOT}/archive"}
         )
     ]
